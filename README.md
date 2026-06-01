@@ -9,5 +9,5 @@ O módulo `app` não possui dependências externas. O projeto usa somente Java, 
 A documentação completa está em:
 
 ```text
-docs/Stockly_Tutorial_Documentacao.md
+Stockly_Documentacao_Completa
 ```

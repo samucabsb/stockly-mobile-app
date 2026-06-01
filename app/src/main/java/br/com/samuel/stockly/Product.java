@@ -1,0 +1,2 @@
+package br.com.samuel.stockly;
+public class Product{public final long id,userId;public final String name,cat;public final double price;public final int qty,min;Product(long id,long userId,String name,double price,int qty,int min,String cat){this.id=id;this.userId=userId;this.name=name;this.price=price;this.qty=qty;this.min=min;this.cat=cat;}boolean critical(){return qty<=min;}String status(){return qty<=0?"SEM ESTOQUE":critical()?"CRÍTICO":"OK";}}

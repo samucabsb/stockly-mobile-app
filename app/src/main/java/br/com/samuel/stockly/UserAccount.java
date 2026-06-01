@@ -1,0 +1,1 @@
+package br.com.samuel.stockly; public class UserAccount{public final long id;public final String name,email,role,status;UserAccount(long id,String n,String e,String r,String s){this.id=id;name=n;email=e;role=r;status=s;}}

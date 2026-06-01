@@ -1,0 +1,2 @@
+package br.com.samuel.stockly;import android.content.*;
+public class Session{private final SharedPreferences p;Session(Context c){p=c.getSharedPreferences("stockly_session",0);}long id(){return p.getLong("id",-1);}String name(){return p.getString("name","");}String role(){return p.getString("role","VIEWER");}boolean logged(){return id()>0;}void save(long id,String n,String r){p.edit().putLong("id",id).putString("name",n).putString("role",r).apply();}void clear(){p.edit().clear().apply();}}

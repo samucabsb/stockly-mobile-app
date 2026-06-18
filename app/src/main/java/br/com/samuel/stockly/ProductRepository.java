@@ -1,1 +1,31 @@
-package br.com.samuel.stockly; import java.util.*; class ProductRepository{private final DB db;ProductRepository(DB db){this.db=db;}List<Product> list(){return db.products();}Product find(long id){return db.findProduct(id);}void save(long id,long uid,String n,double p,int q,int m,String c){if(id>0)db.updateProduct(id,uid,n,p,q,m,c);else db.insertProduct(uid,n,p,q,m,c);}void delete(Product p,long uid){db.deleteProduct(p.id,uid);}}
+package br.com.samuel.stockly;
+
+import java.util.List;
+
+public class ProductRepository {
+    private final DB db;
+
+    public ProductRepository(DB db) {
+        this.db = db;
+    }
+
+    public List<Product> list() {
+        return db.products();
+    }
+
+    public Product find(long id) {
+        return db.findProduct(id);
+    }
+
+    public void save(long id, long userId, String name, double price, int quantity, int minimumQuantity, String category) {
+        if (id > 0) {
+            db.updateProduct(id, userId, name, price, quantity, minimumQuantity, category);
+        } else {
+            db.insertProduct(userId, name, price, quantity, minimumQuantity, category);
+        }
+    }
+
+    public void delete(Product product, long userId) {
+        db.deleteProduct(product.id, userId);
+    }
+}

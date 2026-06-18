@@ -1,1 +1,26 @@
-package br.com.samuel.stockly; class AuthRepository{private final DB db;private final Session s;AuthRepository(DB db,Session s){this.db=db;this.s=s;}void register(String n,String e,String p)throws Exception{long id=db.register(n,e,p);DB.Login u=db.login(e,p);s.save(id,n.trim(),u==null?"ADMIN":u.role);}boolean login(String e,String p)throws Exception{DB.Login u=db.login(e,p);if(u==null)return false;s.save(u.id,u.name,u.role);return true;}}
+package br.com.samuel.stockly;
+
+public class AuthRepository {
+    private final DB db;
+    private final Session session;
+
+    public AuthRepository(DB db, Session session) {
+        this.db = db;
+        this.session = session;
+    }
+
+    public void register(String name, String email, String password) throws Exception {
+        long id = db.register(name, email, password);
+        session.save(id, name.trim());
+    }
+
+    public boolean login(String email, String password) throws Exception {
+        DB.Login user = db.login(email, password);
+        if (user == null) {
+            return false;
+        }
+
+        session.save(user.id, user.name);
+        return true;
+    }
+}

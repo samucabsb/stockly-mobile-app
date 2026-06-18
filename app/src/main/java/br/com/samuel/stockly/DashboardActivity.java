@@ -1,2 +1,188 @@
-package br.com.samuel.stockly;import android.app.*;import android.content.*;import android.os.*;import android.view.*;import android.widget.*;import java.util.*;
-public class DashboardActivity extends Activity{Session s;ProductRepository repo;LinearLayout list;TextView stats;EditText search;List<Product> all=new ArrayList<>();protected void onCreate(Bundle b){super.onCreate(b);s=new Session(this);if(!s.logged()){goLogin();return;}repo=new ProductRepository(new DB(this));build();}protected void onResume(){super.onResume();load();}void build(){ScrollView sv=new ScrollView(this);LinearLayout r=Ui.root(this);sv.addView(r);Ui.add(r,Ui.tv(this,"Olá, "+s.name()+" 👋",24,true,Ui.TEXT));Ui.add(r,Ui.tv(this,"Perfil: "+s.role()+" • Stockly Enterprise",14,false,Ui.MUTED));stats=Ui.tv(this,"",15,true,Ui.GREEN);Ui.addM(r,stats,8);LinearLayout a1=Ui.row(this);Button novo=Ui.btn(this,"Novo",Ui.BLUE,0xffffffff),mov=Ui.btn(this,"Movimentos",0xffffffff,Ui.BLUE);a1.addView(novo,Ui.wt(this));a1.addView(mov,Ui.wt(this));Ui.addM(r,a1,10);LinearLayout a2=Ui.row(this);Button sql=Ui.btn(this,"SQLite",0xffffffff,Ui.BLUE),users=Ui.btn(this,"Usuários",0xffffffff,Ui.BLUE),audit=Ui.btn(this,"Auditoria",0xffffffff,Ui.BLUE);a2.addView(sql,Ui.wt(this));a2.addView(users,Ui.wt(this));a2.addView(audit,Ui.wt(this));Ui.addM(r,a2,8);Button out=Ui.btn(this,"Sair",0xffffffff,Ui.DANGER);Ui.addM(r,out,8);search=Ui.input(this,"Buscar produto");Ui.addM(r,search,12);list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);Ui.addM(r,list,12);setContentView(sv);novo.setVisibility(Perm.create(s.role())?View.VISIBLE:View.GONE);sql.setVisibility(Perm.sql(s.role())?View.VISIBLE:View.GONE);users.setVisibility(Perm.users(s.role())?View.VISIBLE:View.GONE);audit.setVisibility(Perm.users(s.role())?View.VISIBLE:View.GONE);novo.setOnClickListener(v->startActivity(new Intent(this,ProductFormActivity.class)));mov.setOnClickListener(v->startActivity(LogActivity.intent(this,"stock_movements")));sql.setOnClickListener(v->startActivity(new Intent(this,SqlActivity.class)));users.setOnClickListener(v->startActivity(new Intent(this,UsersActivity.class)));audit.setOnClickListener(v->startActivity(LogActivity.intent(this,"audit_logs")));out.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Sair").setMessage("Encerrar sessão?").setNegativeButton("Cancelar",null).setPositiveButton("Sair",(d,w)->{s.clear();goLogin();}).show());search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int b,int c){render();}public void afterTextChanged(android.text.Editable e){}});}void load(){all=repo.list();render();}void render(){list.removeAllViews();String q=search==null?"":search.getText().toString().toLowerCase();int count=0,units=0,crit=0;double total=0;for(Product p:all){count++;units+=p.qty;total+=p.price*p.qty;if(p.critical())crit++;}stats.setText("Produtos: "+count+" • Unidades: "+units+" • Críticos: "+crit+" • Total: "+java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("pt","BR")).format(total));for(Product p:all){if(!q.isEmpty()&&!p.name.toLowerCase().contains(q)&&!p.cat.toLowerCase().contains(q))continue;list.addView(card(p));}if(list.getChildCount()==0)list.addView(Ui.tv(this,"📦 Nenhum produto encontrado",18,false,Ui.MUTED));}View card(Product p){LinearLayout c=Ui.card(this);Ui.add(c,Ui.tv(this,p.name+" • "+p.status(),17,true,p.critical()?Ui.DANGER:Ui.TEXT));Ui.add(c,Ui.tv(this,p.cat+" • Qtd: "+p.qty+" • Min: "+p.min,14,false,Ui.MUTED));LinearLayout row=Ui.row(this);Button ed=Ui.btn(this,"Editar",0xffffffff,Ui.BLUE),del=Ui.btn(this,"Excluir",0xffffffff,Ui.DANGER);row.addView(ed,Ui.wt(this));if(Perm.del(s.role()))row.addView(del,Ui.wt(this));Ui.addM(c,row,8);ed.setOnClickListener(v->startActivity(ProductFormActivity.intent(this,p.id)));del.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Excluir").setMessage(p.name).setNegativeButton("Cancelar",null).setPositiveButton("Excluir",(d,w)->{repo.delete(p,s.id());load();}).show());return c;}void goLogin(){startActivity(new Intent(this,LoginActivity.class));finish();}}
+package br.com.samuel.stockly;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Intent;
+import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+public class DashboardActivity extends Activity {
+    private Session session;
+    private ProductRepository repository;
+    private LinearLayout listContainer;
+    private TextView statsText;
+    private EditText searchInput;
+    private List<Product> products = new ArrayList<>();
+
+    @Override
+    protected void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+
+        session = new Session(this);
+        if (!session.logged()) {
+            openLogin();
+            return;
+        }
+
+        repository = new ProductRepository(new DB(this));
+        buildLayout();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadProducts();
+    }
+
+    private void buildLayout() {
+        ScrollView scrollView = new ScrollView(this);
+        LinearLayout root = Ui.root(this);
+        scrollView.addView(root);
+
+        Ui.add(root, Ui.tv(this, "Olá, " + session.name() + " 👋", 24, true, Ui.TEXT));
+        Ui.add(root, Ui.subtitle(this, "Acesso completo • Stockly Enterprise"));
+
+        statsText = Ui.tv(this, "Carregando resumo...", 15, true, Ui.GREEN);
+        Ui.addMargin(root, statsText, 8);
+
+        LinearLayout actionsPrimary = Ui.row(this);
+        Button newButton = Ui.primaryButton(this, "Novo produto");
+        Button movementsButton = Ui.outlineButton(this, "Movimentos");
+        actionsPrimary.addView(newButton, Ui.weight(this));
+        actionsPrimary.addView(movementsButton, Ui.weight(this));
+        Ui.addMargin(root, actionsPrimary, 10);
+
+        LinearLayout actionsSecondary = Ui.row(this);
+        Button sqlButton = Ui.outlineButton(this, "SQLite");
+        Button usersButton = Ui.outlineButton(this, "Usuários");
+        Button auditButton = Ui.outlineButton(this, "Auditoria");
+        actionsSecondary.addView(sqlButton, Ui.weight(this));
+        actionsSecondary.addView(usersButton, Ui.weight(this));
+        actionsSecondary.addView(auditButton, Ui.weight(this));
+        Ui.addMargin(root, actionsSecondary, 8);
+
+        Button logoutButton = Ui.dangerButton(this, "Sair");
+        Ui.addMargin(root, logoutButton, 8);
+
+        searchInput = Ui.input(this, "Buscar produto ou categoria");
+        Ui.addMargin(root, searchInput, 12);
+
+        listContainer = new LinearLayout(this);
+        listContainer.setOrientation(LinearLayout.VERTICAL);
+        Ui.addMargin(root, listContainer, 12);
+        setContentView(scrollView);
+
+        newButton.setOnClickListener(view -> startActivity(new Intent(this, ProductFormActivity.class)));
+        movementsButton.setOnClickListener(view -> startActivity(LogActivity.intent(this, "stock_movements")));
+        sqlButton.setOnClickListener(view -> startActivity(new Intent(this, SqlActivity.class)));
+        usersButton.setOnClickListener(view -> startActivity(new Intent(this, UsersActivity.class)));
+        auditButton.setOnClickListener(view -> startActivity(LogActivity.intent(this, "audit_logs")));
+        logoutButton.setOnClickListener(view -> confirmLogout());
+
+        searchInput.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { renderProducts(); }
+            @Override public void afterTextChanged(Editable editable) {}
+        });
+    }
+
+    private void loadProducts() {
+        products = repository.list();
+        renderProducts();
+    }
+
+    private void renderProducts() {
+        listContainer.removeAllViews();
+        String query = searchInput == null ? "" : searchInput.getText().toString().toLowerCase();
+        int count = 0;
+        int units = 0;
+        int critical = 0;
+        double total = 0;
+
+        for (Product product : products) {
+            count++;
+            units += product.quantity;
+            total += product.price * product.quantity;
+            if (product.critical()) {
+                critical++;
+            }
+        }
+
+        statsText.setText("Produtos: " + count + " • Unidades: " + units + " • Críticos: " + critical + " • Total: " + money(total));
+
+        for (Product product : products) {
+            boolean matches = product.name.toLowerCase().contains(query) || product.category.toLowerCase().contains(query);
+            if (query.isEmpty() || matches) {
+                listContainer.addView(productCard(product));
+            }
+        }
+
+        if (listContainer.getChildCount() == 0) {
+            Ui.add(listContainer, Ui.tv(this, "📦 Nenhum produto encontrado", 18, false, Ui.MUTED));
+        }
+    }
+
+    private View productCard(Product product) {
+        LinearLayout card = Ui.card(this);
+        Ui.add(card, Ui.tv(this, product.name + " • " + product.status(), 17, true, product.critical() ? Ui.DANGER : Ui.TEXT));
+        Ui.add(card, Ui.subtitle(this, product.category + " • Qtd: " + product.quantity + " • Min: " + product.minimumQuantity + " • " + money(product.price)));
+
+        LinearLayout row = Ui.row(this);
+        Button editButton = Ui.outlineButton(this, "Editar");
+        Button deleteButton = Ui.dangerButton(this, "Excluir");
+        row.addView(editButton, Ui.weight(this));
+        row.addView(deleteButton, Ui.weight(this));
+        Ui.addMargin(card, row, 8);
+
+        editButton.setOnClickListener(view -> startActivity(ProductFormActivity.intent(this, product.id)));
+        deleteButton.setOnClickListener(view -> confirmDelete(product));
+        return card;
+    }
+
+    private void confirmDelete(Product product) {
+        new AlertDialog.Builder(this)
+                .setTitle("Excluir produto")
+                .setMessage("Deseja excluir " + product.name + "?")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Excluir", (dialog, which) -> {
+                    repository.delete(product, session.id());
+                    Toast.makeText(this, "Produto excluído.", Toast.LENGTH_SHORT).show();
+                    loadProducts();
+                })
+                .show();
+    }
+
+    private void confirmLogout() {
+        new AlertDialog.Builder(this)
+                .setTitle("Sair")
+                .setMessage("Deseja encerrar a sessão?")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Sair", (dialog, which) -> {
+                    session.clear();
+                    openLogin();
+                })
+                .show();
+    }
+
+    private String money(double value) {
+        return NumberFormat.getCurrencyInstance(new Locale("pt", "BR")).format(value);
+    }
+
+    private void openLogin() {
+        startActivity(new Intent(this, LoginActivity.class));
+        finish();
+    }
+}

@@ -1,2 +1,65 @@
-package br.com.samuel.stockly;import android.app.*;import android.os.*;import android.widget.*;
-public class UsersActivity extends Activity{DB db;LinearLayout list;protected void onCreate(Bundle b){super.onCreate(b);db=new DB(this);LinearLayout r=Ui.root(this);Ui.add(r,Ui.tv(this,"Usuários",24,true,Ui.TEXT));Ui.add(r,Ui.tv(this,"Toque em um usuário para alternar perfil ou status.",14,false,Ui.MUTED));ScrollView sv=new ScrollView(this);list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);sv.addView(list);r.addView(sv,new LinearLayout.LayoutParams(-1,0,1));setContentView(r);load();}void load(){list.removeAllViews();for(UserAccount u:db.users()){LinearLayout c=Ui.card(this);Ui.add(c,Ui.tv(this,u.name+" • "+u.role,16,true,Ui.TEXT));Ui.add(c,Ui.tv(this,"ID: "+u.id+" • "+u.email+" • "+u.status,14,false,Ui.MUTED));c.setOnClickListener(v->new AlertDialog.Builder(this).setTitle(u.name).setItems(new String[]{"Alternar perfil","Ativar/Inativar"},(d,w)->{if(w==0)db.cycleRole(u.id);else db.toggleStatus(u.id);load();}).show());Ui.addM(list,c,8);}}}
+package br.com.samuel.stockly;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.os.Bundle;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.Toast;
+
+public class UsersActivity extends Activity {
+    private DB db;
+    private LinearLayout listContainer;
+
+    @Override
+    protected void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        db = new DB(this);
+        buildLayout();
+        loadUsers();
+    }
+
+    private void buildLayout() {
+        LinearLayout root = Ui.root(this);
+        Ui.add(root, Ui.title(this, "Usuários"));
+        Ui.add(root, Ui.subtitle(this, "Todos os usuários possuem acesso completo. Esta tela controla apenas status ativo/inativo."));
+
+        ScrollView scrollView = new ScrollView(this);
+        listContainer = new LinearLayout(this);
+        listContainer.setOrientation(LinearLayout.VERTICAL);
+        scrollView.addView(listContainer);
+        root.addView(scrollView, new LinearLayout.LayoutParams(-1, 0, 1));
+
+        setContentView(root);
+    }
+
+    private void loadUsers() {
+        listContainer.removeAllViews();
+
+        for (UserAccount user : db.users()) {
+            LinearLayout card = Ui.card(this);
+            Ui.add(card, Ui.tv(this, user.name, 16, true, Ui.TEXT));
+            Ui.add(card, Ui.subtitle(this, "ID: " + user.id + " • " + user.email + " • " + label(user.status)));
+            card.setOnClickListener(view -> confirmStatusChange(user));
+            Ui.addMargin(listContainer, card, 8);
+        }
+    }
+
+    private void confirmStatusChange(UserAccount user) {
+        String nextAction = user.active() ? "inativar" : "ativar";
+        new AlertDialog.Builder(this)
+                .setTitle(user.name)
+                .setMessage("Deseja " + nextAction + " este usuário?")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Confirmar", (dialog, which) -> {
+                    db.toggleStatus(user.id);
+                    Toast.makeText(this, "Status atualizado.", Toast.LENGTH_SHORT).show();
+                    loadUsers();
+                })
+                .show();
+    }
+
+    private String label(String status) {
+        return "ACTIVE".equals(status) ? "Ativo" : "Inativo";
+    }
+}

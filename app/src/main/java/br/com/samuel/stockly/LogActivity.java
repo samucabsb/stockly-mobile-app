@@ -1,2 +1,58 @@
-package br.com.samuel.stockly;import android.app.*;import android.content.*;import android.os.*;import android.widget.*;import java.util.*;
-public class LogActivity extends Activity{static Intent intent(Context c,String t){return new Intent(c,LogActivity.class).putExtra("t",t);}protected void onCreate(Bundle b){super.onCreate(b);String t=getIntent().getStringExtra("t");DB db=new DB(this);List<Entry> data=db.entries(t);LinearLayout r=Ui.root(this);Ui.add(r,Ui.tv(this,t.equals("audit_logs")?"Auditoria":"Movimentações",24,true,Ui.TEXT));Ui.add(r,Ui.tv(this,data.size()+" registros",14,false,Ui.MUTED));ScrollView sv=new ScrollView(this);LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);sv.addView(list);for(Entry e:data){LinearLayout c=Ui.card(this);Ui.add(c,Ui.tv(this,e.title,16,true,Ui.TEXT));Ui.add(c,Ui.tv(this,e.sub,14,false,Ui.MUTED));Ui.addM(list,c,8);}r.addView(sv,new LinearLayout.LayoutParams(-1,0,1));setContentView(r);}}
+package br.com.samuel.stockly;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+
+import java.util.List;
+
+public class LogActivity extends Activity {
+    private static final String EXTRA_TABLE = "table";
+
+    public static Intent intent(Context context, String table) {
+        return new Intent(context, LogActivity.class).putExtra(EXTRA_TABLE, table);
+    }
+
+    @Override
+    protected void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+
+        String table = getIntent().getStringExtra(EXTRA_TABLE);
+        if (table == null) {
+            table = "stock_movements";
+        }
+
+        DB db = new DB(this);
+        List<Entry> entries = db.entries(table);
+        buildLayout(table, entries);
+    }
+
+    private void buildLayout(String table, List<Entry> entries) {
+        LinearLayout root = Ui.root(this);
+        String title = "audit_logs".equals(table) ? "Auditoria" : "Movimentações";
+        Ui.add(root, Ui.title(this, title));
+        Ui.add(root, Ui.subtitle(this, entries.size() + " registros encontrados"));
+
+        ScrollView scrollView = new ScrollView(this);
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        scrollView.addView(list);
+
+        if (entries.isEmpty()) {
+            Ui.addMargin(list, Ui.subtitle(this, "Nenhum registro encontrado."), 12);
+        } else {
+            for (Entry entry : entries) {
+                LinearLayout card = Ui.card(this);
+                Ui.add(card, Ui.tv(this, entry.title, 16, true, Ui.TEXT));
+                Ui.add(card, Ui.subtitle(this, entry.subtitle));
+                Ui.addMargin(list, card, 8);
+            }
+        }
+
+        root.addView(scrollView, new LinearLayout.LayoutParams(-1, 0, 1));
+        setContentView(root);
+    }
+}

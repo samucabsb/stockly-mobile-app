@@ -1,2 +1,73 @@
-package br.com.samuel.stockly;import android.app.*;import android.content.*;import android.os.*;import android.widget.*;
-public class SqlActivity extends Activity{DB db;TextView sum,table;String current="products";protected void onCreate(Bundle b){super.onCreate(b);db=new DB(this);LinearLayout r=Ui.root(this);Ui.add(r,Ui.tv(this,"SQLite do Stockly",24,true,Ui.TEXT));sum=Ui.tv(this,"",14,false,Ui.MUTED);Ui.add(r,sum);LinearLayout buttons=Ui.row(this);String[] ts={"products","users","stock_movements","audit_logs"};for(String t:ts){Button bt=Ui.btn(this,t,0xffffffff,Ui.BLUE);bt.setOnClickListener(v->{current=((Button)v).getText().toString();render();});buttons.addView(bt,Ui.wt(this));}Ui.addM(r,buttons,8);Button copy=Ui.btn(this,"Copiar tabela",Ui.BLUE,0xffffffff);Ui.addM(r,copy,8);HorizontalScrollView h=new HorizontalScrollView(this);ScrollView sv=new ScrollView(this);table=Ui.tv(this,"",13,false,Ui.TEXT);table.setTypeface(android.graphics.Typeface.MONOSPACE);table.setTextIsSelectable(true);sv.addView(table);h.addView(sv);r.addView(h,new LinearLayout.LayoutParams(-1,0,1));copy.setOnClickListener(v->{((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Stockly SQL",table.getText()));Toast.makeText(this,"Copiado",Toast.LENGTH_SHORT).show();});setContentView(r);render();}void render(){sum.setText("Banco: "+DB.DBN+" • "+current+" • Registros: "+db.rows(current));table.setText(db.dump(current));}}
+package br.com.samuel.stockly;
+
+import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.HorizontalScrollView;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class SqlActivity extends Activity {
+    private DB db;
+    private TextView summaryText;
+    private TextView tableText;
+    private String currentTable = "products";
+
+    @Override
+    protected void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        db = new DB(this);
+        buildLayout();
+        render();
+    }
+
+    private void buildLayout() {
+        LinearLayout root = Ui.root(this);
+        Ui.add(root, Ui.title(this, "SQLite do Stockly"));
+        Ui.add(root, Ui.subtitle(this, "Visualização local para apresentação e depuração."));
+
+        summaryText = Ui.subtitle(this, "");
+        Ui.add(root, summaryText);
+
+        LinearLayout buttons = Ui.row(this);
+        String[] tables = {"products", "users", "stock_movements", "audit_logs"};
+        for (String table : tables) {
+            Button button = Ui.outlineButton(this, table);
+            button.setOnClickListener(view -> {
+                currentTable = table;
+                render();
+            });
+            buttons.addView(button, Ui.weight(this));
+        }
+        Ui.addMargin(root, buttons, 8);
+
+        Button copyButton = Ui.primaryButton(this, "Copiar tabela");
+        Ui.addMargin(root, copyButton, 8);
+
+        HorizontalScrollView horizontalScrollView = new HorizontalScrollView(this);
+        ScrollView scrollView = new ScrollView(this);
+        tableText = Ui.tv(this, "", 13, false, Ui.TEXT);
+        tableText.setTypeface(android.graphics.Typeface.MONOSPACE);
+        tableText.setTextIsSelectable(true);
+        scrollView.addView(tableText);
+        horizontalScrollView.addView(scrollView);
+        root.addView(horizontalScrollView, new LinearLayout.LayoutParams(-1, 0, 1));
+
+        copyButton.setOnClickListener(view -> {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            clipboard.setPrimaryClip(ClipData.newPlainText("Stockly SQL", tableText.getText()));
+            Toast.makeText(this, "Tabela copiada.", Toast.LENGTH_SHORT).show();
+        });
+
+        setContentView(root);
+    }
+
+    private void render() {
+        summaryText.setText("Banco: " + DB.DB_NAME + " • " + currentTable + " • Registros: " + db.rows(currentTable));
+        tableText.setText(db.dump(currentTable));
+    }
+}

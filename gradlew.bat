@@ -1,7 +1,10 @@
-@rem Minimal Gradle startup script for Windows
-@if "%DEBUG%" == "" @echo off
-set DIRNAME=%~dp0
-set APP_HOME=%DIRNAME%
-set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
-set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
-"%JAVA_HOME%\bin\java.exe" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% -classpath "%CLASSPATH%" org.gradle.wrapper.GradleWrapperMain %*
+@echo off
+where gradle >nul 2>nul
+if %ERRORLEVEL% EQU 0 (
+    gradle %*
+    exit /b %ERRORLEVEL%
+)
+
+echo Gradle local nao encontrado. Abra o projeto no Android Studio para sincronizar e executar.
+echo Ou instale o Gradle e rode: gradle assembleDebug
+exit /b 1

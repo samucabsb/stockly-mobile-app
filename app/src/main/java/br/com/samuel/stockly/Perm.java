@@ -1,1 +1,20 @@
-package br.com.samuel.stockly; public final class Perm{static boolean create(String r){return "ADMIN".equals(r)||"EMPLOYEE".equals(r);}static boolean del(String r){return "ADMIN".equals(r);}static boolean sql(String r){return "ADMIN".equals(r);}static boolean users(String r){return "ADMIN".equals(r);}}
+package br.com.samuel.stockly;
+
+public final class Perm {
+
+    static boolean create(String r){
+        return true;
+    }
+
+    static boolean del(String r){
+        return true;
+    }
+
+    static boolean sql(String r){
+        return true;
+    }
+
+    static boolean users(String r){
+        return true;
+    }
+}
